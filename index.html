@@ -221,6 +221,11 @@
       font-weight: 850;
     }
 
+    .roll:disabled {
+      color: rgba(245, 223, 159, .68);
+      opacity: .82;
+    }
+
     .result {
       width: 100%;
       min-height: 58px;
@@ -317,7 +322,7 @@
 
     .direct {
       display: grid;
-      grid-template-columns: 1fr 76px;
+      grid-template-columns: 1fr;
       gap: 8px;
     }
 
@@ -359,7 +364,7 @@
           <span class="pip"></span><span class="pip"></span><span class="pip"></span>
           <span class="pip"></span><span class="pip"></span><span class="pip"></span>
         </div>
-        <button class="roll" id="rollButton" type="button">サイコロを振る</button>
+        <button class="roll" id="rollButton" type="button">YAKE道 GO!</button>
       </div>
 
       <div class="result">
@@ -381,7 +386,6 @@
           </div>
           <div class="direct">
             <input id="currentHp" type="number" inputmode="numeric" min="0" placeholder="現在HP" aria-label="現在HP">
-            <button class="mini" id="setHp" type="button">HP設定</button>
           </div>
         </section>
 
@@ -410,7 +414,6 @@
     const maxHpInput = document.querySelector("#maxHp");
     const dpInput = document.querySelector("#dp");
     const currentHpInput = document.querySelector("#currentHp");
-    const setHp = document.querySelector("#setHp");
     const hpText = document.querySelector("#hpText");
     const hpFill = document.querySelector("#hpFill");
     const dpText = document.querySelector("#dpText");
@@ -420,6 +423,7 @@
     let hp = 20;
     let dp = 2;
     let lastRoll = 1;
+    let isRolling = false;
 
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
     const readNumber = (input, fallback) => {
@@ -427,20 +431,24 @@
       return Number.isFinite(value) ? value : fallback;
     };
 
-    function updateMeters() {
+    function updateMeters(syncHpInput = false) {
       const hpPercent = maxHp > 0 ? clamp((hp / maxHp) * 100, 0, 100) : 0;
       const dpPercent = clamp((dp / 6) * 100, 0, 100);
       hpText.textContent = `${hp} / ${maxHp}`;
-      currentHpInput.value = hp;
+      if (syncHpInput) currentHpInput.value = hp;
       hpFill.style.setProperty("--percent", `${hpPercent}%`);
       dpText.textContent = dp;
       dpFill.style.setProperty("--percent", `${dpPercent}%`);
     }
 
+    function showDice(value) {
+      dice.dataset.value = String(value);
+      dice.setAttribute("aria-label", `サイコロの目 ${value}`);
+    }
+
     function updateDamage() {
       const dealt = Math.max(lastRoll - dp, 0);
-      dice.dataset.value = String(lastRoll);
-      dice.setAttribute("aria-label", `サイコロの目 ${lastRoll}`);
+      showDice(lastRoll);
       damage.textContent = dealt;
       formula.textContent = `${lastRoll} - DP ${dp}`;
     }
@@ -452,20 +460,40 @@
       setup.classList.add("hidden");
       battle.style.display = "flex";
       resetButton.classList.remove("hidden");
-      updateMeters();
+      updateMeters(true);
       updateDamage();
     }
 
     function rollDice() {
-      lastRoll = Math.floor(Math.random() * 6) + 1;
+      if (isRolling) return;
+      isRolling = true;
+      rollButton.disabled = true;
+      rollButton.textContent = "YAKE道...";
       dice.classList.remove("rolling");
       void dice.offsetWidth;
       dice.classList.add("rolling");
-      updateDamage();
+
+      let face = 1;
+      const rollingTimer = window.setInterval(() => {
+        showDice(face);
+        face = face >= 6 ? 1 : face + 1;
+      }, 55);
+
+      window.setTimeout(() => {
+        window.clearInterval(rollingTimer);
+        lastRoll = Math.floor(Math.random() * 6) + 1;
+        updateDamage();
+        isRolling = false;
+        rollButton.disabled = false;
+        rollButton.textContent = "YAKE道 GO!";
+      }, 3000);
     }
 
     function setCurrentHp() {
-      hp = clamp(Math.floor(readNumber(currentHpInput, hp)), 0, maxHp);
+      if (currentHpInput.value === "") return;
+      const nextHp = clamp(Math.floor(readNumber(currentHpInput, hp)), 0, maxHp);
+      hp = nextHp;
+      if (Number(currentHpInput.value) !== nextHp) currentHpInput.value = nextHp;
       updateMeters();
     }
 
@@ -479,7 +507,7 @@
 
     startButton.addEventListener("click", startBattle);
     rollButton.addEventListener("click", rollDice);
-    setHp.addEventListener("click", setCurrentHp);
+    currentHpInput.addEventListener("input", setCurrentHp);
     resetButton.addEventListener("click", resetApp);
 
     [maxHpInput, dpInput].forEach((input) => {
