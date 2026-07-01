@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MILD OF YAKEDO Battle Counter</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #121417;
+      --panel: #171b20;
+      --panel-2: #1f252c;
+      --text: #f3f0ea;
+      --muted: #8f9aa6;
+      --line: #303844;
+      --hp: #e04b62;
+      --dp: #42a7c8;
+      --accent: #d7b25e;
+      --good: #78d98c;
+      --shadow: 0 14px 34px rgba(0, 0, 0, .28);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      background: linear-gradient(180deg, #171513 0%, #101418 45%, #0c0f12 100%);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      width: min(100%, 430px);
+      min-height: 100svh;
+      padding: max(12px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .title {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+      min-height: 36px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.02rem, 5.2vw, 1.48rem);
+      line-height: .92;
+      letter-spacing: 0;
+      font-weight: 850;
+    }
+
+    .subtitle {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 750;
+    }
+
+    .reset {
+      border: 1px solid var(--line);
+      background: rgba(23, 27, 32, .82);
+      color: var(--muted);
+      width: 36px;
+      height: 36px;
+      border-radius: 7px;
+      font-size: .95rem;
+    }
+
+    .setup {
+      margin: auto 0;
+      display: grid;
+      gap: 14px;
+    }
+
+    .setup h2 {
+      margin: 0 0 2px;
+      font-size: 1.22rem;
+    }
+
+    .setup p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: .88rem;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #0f1317;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(242, 193, 78, .18);
+    }
+
+    .primary {
+      min-height: 48px;
+      border: 0;
+      border-radius: 7px;
+      background: var(--accent);
+      color: #1c1604;
+      font-size: 1rem;
+      font-weight: 900;
+      box-shadow: var(--shadow);
+    }
+
+    .battle {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .dice-zone {
+      display: grid;
+      place-items: center;
+      gap: 10px;
+      padding: 0;
+    }
+
+    .dice {
+      width: min(20vw, 78px);
+      aspect-ratio: 1;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #f4f1ea, #d9d9d4);
+      box-shadow: inset -5px -6px 10px rgba(57, 64, 74, .18), inset 4px 4px 8px rgba(255, 255, 255, .74), 0 10px 24px rgba(0, 0, 0, .24);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      padding: 9px;
+      transform: rotate(-2deg);
+    }
+
+    .pip {
+      width: 40%;
+      aspect-ratio: 1;
+      align-self: center;
+      justify-self: center;
+      border-radius: 50%;
+      background: #181c21;
+      opacity: 0;
+      box-shadow: inset 2px 3px 4px rgba(255, 255, 255, .12);
+    }
+
+    .dice[data-value="1"] .pip:nth-child(5),
+    .dice[data-value="2"] .pip:nth-child(1),
+    .dice[data-value="2"] .pip:nth-child(9),
+    .dice[data-value="3"] .pip:nth-child(1),
+    .dice[data-value="3"] .pip:nth-child(5),
+    .dice[data-value="3"] .pip:nth-child(9),
+    .dice[data-value="4"] .pip:nth-child(1),
+    .dice[data-value="4"] .pip:nth-child(3),
+    .dice[data-value="4"] .pip:nth-child(7),
+    .dice[data-value="4"] .pip:nth-child(9),
+    .dice[data-value="5"] .pip:nth-child(1),
+    .dice[data-value="5"] .pip:nth-child(3),
+    .dice[data-value="5"] .pip:nth-child(5),
+    .dice[data-value="5"] .pip:nth-child(7),
+    .dice[data-value="5"] .pip:nth-child(9),
+    .dice[data-value="6"] .pip:nth-child(1),
+    .dice[data-value="6"] .pip:nth-child(3),
+    .dice[data-value="6"] .pip:nth-child(4),
+    .dice[data-value="6"] .pip:nth-child(6),
+    .dice[data-value="6"] .pip:nth-child(7),
+    .dice[data-value="6"] .pip:nth-child(9) {
+      opacity: 1;
+    }
+
+    .dice.rolling {
+      animation: roll .34s ease;
+    }
+
+    @keyframes roll {
+      0% { transform: rotate(-2deg) scale(1); }
+      50% { transform: rotate(8deg) scale(.96); }
+      100% { transform: rotate(-2deg) scale(1); }
+    }
+
+    .roll {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid rgba(215, 178, 94, .42);
+      border-radius: 7px;
+      background: linear-gradient(180deg, #262217, #1b1a16);
+      color: #f5df9f;
+      font-size: .98rem;
+      font-weight: 850;
+    }
+
+    .result {
+      width: 100%;
+      min-height: 58px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(23, 27, 32, .82);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 12px;
+    }
+
+    .result small {
+      display: block;
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 750;
+      margin-bottom: 1px;
+    }
+
+    .damage {
+      color: var(--good);
+      font-size: 1.55rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .meters {
+      display: grid;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .meter {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(23, 27, 32, .88);
+      padding: 10px 12px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .meter-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .meter-name {
+      font-size: .84rem;
+      font-weight: 850;
+    }
+
+    .meter-value {
+      color: var(--muted);
+      font-size: .84rem;
+      font-weight: 800;
+    }
+
+    .bar {
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #101318;
+      border: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .fill {
+      width: var(--percent);
+      height: 100%;
+      border-radius: inherit;
+      transition: width .2s ease;
+    }
+
+    .fill.hp {
+      background: linear-gradient(90deg, #a72f43, var(--hp));
+    }
+
+    .fill.dp {
+      background: linear-gradient(90deg, #277da1, var(--dp));
+    }
+
+    .mini {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: .88rem;
+      font-weight: 850;
+    }
+
+    .direct {
+      display: grid;
+      grid-template-columns: 1fr 76px;
+      gap: 8px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="title">
+      <div>
+        <h1>MILD OF<br>YAKEDO</h1>
+        <div class="subtitle">低温のYAKEDO / Battle Counter</div>
+      </div>
+      <button class="reset hidden" id="resetButton" type="button" aria-label="リセット">↻</button>
+    </header>
+
+    <section class="setup" id="setup">
+      <div>
+        <h2>初期値入力</h2>
+        <p>HPとDPを入れたら開始。サイコロは 1-6、与ダメージは「出目 - DP」です。</p>
+      </div>
+      <div class="field">
+        <label for="maxHp">HP</label>
+        <input id="maxHp" type="number" inputmode="numeric" min="1" value="20">
+      </div>
+      <div class="field">
+        <label for="dp">DP</label>
+        <input id="dp" type="number" inputmode="numeric" min="0" value="2">
+      </div>
+      <button class="primary" id="startButton" type="button">開始</button>
+    </section>
+
+    <section class="battle" id="battle" aria-live="polite">
+      <div class="dice-zone">
+        <div class="dice" id="dice" data-value="1" aria-label="サイコロの目 1">
+          <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+        </div>
+        <button class="roll" id="rollButton" type="button">サイコロを振る</button>
+      </div>
+
+      <div class="result">
+        <div>
+          <small id="formula">1 - DP 0</small>
+          <strong>相手へのダメージ</strong>
+        </div>
+        <div class="damage" id="damage">1</div>
+      </div>
+
+      <div class="meters">
+        <section class="meter">
+          <div class="meter-head">
+            <div class="meter-name">HP</div>
+            <div class="meter-value" id="hpText">20 / 20</div>
+          </div>
+          <div class="bar" aria-hidden="true">
+            <div class="fill hp" id="hpFill" style="--percent: 100%"></div>
+          </div>
+          <div class="direct">
+            <input id="currentHp" type="number" inputmode="numeric" min="0" placeholder="現在HP" aria-label="現在HP">
+            <button class="mini" id="setHp" type="button">HP設定</button>
+          </div>
+        </section>
+
+        <section class="meter">
+          <div class="meter-head">
+            <div class="meter-name">DP</div>
+            <div class="meter-value" id="dpText">2</div>
+          </div>
+          <div class="bar" aria-hidden="true">
+            <div class="fill dp" id="dpFill" style="--percent: 33%"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const setup = document.querySelector("#setup");
+    const battle = document.querySelector("#battle");
+    const resetButton = document.querySelector("#resetButton");
+    const startButton = document.querySelector("#startButton");
+    const rollButton = document.querySelector("#rollButton");
+    const dice = document.querySelector("#dice");
+    const damage = document.querySelector("#damage");
+    const formula = document.querySelector("#formula");
+    const maxHpInput = document.querySelector("#maxHp");
+    const dpInput = document.querySelector("#dp");
+    const currentHpInput = document.querySelector("#currentHp");
+    const setHp = document.querySelector("#setHp");
+    const hpText = document.querySelector("#hpText");
+    const hpFill = document.querySelector("#hpFill");
+    const dpText = document.querySelector("#dpText");
+    const dpFill = document.querySelector("#dpFill");
+
+    let maxHp = 20;
+    let hp = 20;
+    let dp = 2;
+    let lastRoll = 1;
+
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+    const readNumber = (input, fallback) => {
+      const value = Number(input.value);
+      return Number.isFinite(value) ? value : fallback;
+    };
+
+    function updateMeters() {
+      const hpPercent = maxHp > 0 ? clamp((hp / maxHp) * 100, 0, 100) : 0;
+      const dpPercent = clamp((dp / 6) * 100, 0, 100);
+      hpText.textContent = `${hp} / ${maxHp}`;
+      currentHpInput.value = hp;
+      hpFill.style.setProperty("--percent", `${hpPercent}%`);
+      dpText.textContent = dp;
+      dpFill.style.setProperty("--percent", `${dpPercent}%`);
+    }
+
+    function updateDamage() {
+      const dealt = Math.max(lastRoll - dp, 0);
+      dice.dataset.value = String(lastRoll);
+      dice.setAttribute("aria-label", `サイコロの目 ${lastRoll}`);
+      damage.textContent = dealt;
+      formula.textContent = `${lastRoll} - DP ${dp}`;
+    }
+
+    function startBattle() {
+      maxHp = Math.max(Math.floor(readNumber(maxHpInput, 20)), 1);
+      hp = maxHp;
+      dp = Math.max(Math.floor(readNumber(dpInput, 0)), 0);
+      setup.classList.add("hidden");
+      battle.style.display = "flex";
+      resetButton.classList.remove("hidden");
+      updateMeters();
+      updateDamage();
+    }
+
+    function rollDice() {
+      lastRoll = Math.floor(Math.random() * 6) + 1;
+      dice.classList.remove("rolling");
+      void dice.offsetWidth;
+      dice.classList.add("rolling");
+      updateDamage();
+    }
+
+    function setCurrentHp() {
+      hp = clamp(Math.floor(readNumber(currentHpInput, hp)), 0, maxHp);
+      updateMeters();
+    }
+
+    function resetApp() {
+      battle.style.display = "none";
+      setup.classList.remove("hidden");
+      resetButton.classList.add("hidden");
+      maxHpInput.value = maxHp;
+      dpInput.value = dp;
+    }
+
+    startButton.addEventListener("click", startBattle);
+    rollButton.addEventListener("click", rollDice);
+    setHp.addEventListener("click", setCurrentHp);
+    resetButton.addEventListener("click", resetApp);
+
+    [maxHpInput, dpInput].forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") startBattle();
+      });
+    });
+  </script>
+</body>
+</html>
