@@ -104,6 +104,27 @@
       gap: 8px;
     }
 
+    .choice-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .choice {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #0f1317;
+      color: var(--muted);
+      font-weight: 850;
+    }
+
+    .choice.is-selected {
+      border-color: rgba(66, 167, 200, .76);
+      background: rgba(66, 167, 200, .16);
+      color: var(--text);
+    }
+
     label {
       color: var(--muted);
       font-size: .88rem;
@@ -287,6 +308,10 @@
       font-weight: 800;
     }
 
+    .meter-value.warning {
+      color: #f0d27a;
+    }
+
     .bar {
       height: 12px;
       border-radius: 999px;
@@ -310,6 +335,10 @@
       background: linear-gradient(90deg, #277da1, var(--dp));
     }
 
+    .fill.cost {
+      background: linear-gradient(90deg, #d7b25e, #f0d27a);
+    }
+
     .mini {
       min-height: 44px;
       border: 1px solid var(--line);
@@ -323,6 +352,12 @@
     .direct {
       display: grid;
       grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .cost-tools {
+      display: grid;
+      grid-template-columns: 1fr 72px 104px;
       gap: 8px;
     }
 
@@ -348,12 +383,31 @@
       </div>
       <div class="field">
         <label for="maxHp">HP</label>
-        <input id="maxHp" type="number" inputmode="numeric" min="1" value="20">
+        <input id="maxHp" type="text" inputmode="numeric" pattern="[0-9]*" value="10">
       </div>
       <div class="field">
-        <label for="dp">DP</label>
-        <input id="dp" type="number" inputmode="numeric" min="0" value="2">
+        <label>DP</label>
+        <div class="choice-grid" id="dpChoices" role="group" aria-label="DP">
+          <button class="choice" type="button" data-dp="1">1</button>
+          <button class="choice is-selected" type="button" data-dp="2">2</button>
+          <button class="choice" type="button" data-dp="3">3</button>
+          <button class="choice" type="button" data-dp="4">4</button>
+        </div>
       </div>
+      <section class="meter">
+        <div class="meter-head">
+          <div class="meter-name">コスト</div>
+          <div class="meter-value" id="setupCostText">0 / 15</div>
+        </div>
+        <div class="bar" aria-hidden="true">
+          <div class="fill cost" id="setupCostFill" style="--percent: 0%"></div>
+        </div>
+        <div class="cost-tools">
+          <input id="setupCostInput" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="残り 15">
+          <button class="mini" id="setupCostSetButton" type="button">セット</button>
+          <button class="mini" id="setupCostResetButton" type="button">コストリセット</button>
+        </div>
+      </section>
       <button class="primary" id="startButton" type="button">開始</button>
     </section>
 
@@ -379,13 +433,13 @@
         <section class="meter">
           <div class="meter-head">
             <div class="meter-name">HP</div>
-            <div class="meter-value" id="hpText">20 / 20</div>
+            <div class="meter-value" id="hpText">10 / 10</div>
           </div>
           <div class="bar" aria-hidden="true">
             <div class="fill hp" id="hpFill" style="--percent: 100%"></div>
           </div>
           <div class="direct">
-            <input id="currentHp" type="number" inputmode="numeric" min="0" placeholder="現在HP" aria-label="現在HP">
+            <input id="currentHp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="現在HP" aria-label="現在HP">
           </div>
         </section>
 
@@ -395,7 +449,7 @@
             <div class="meter-value" id="dpText">2</div>
           </div>
           <div class="bar" aria-hidden="true">
-            <div class="fill dp" id="dpFill" style="--percent: 33%"></div>
+            <div class="fill dp" id="dpFill" style="--percent: 50%"></div>
           </div>
         </section>
       </div>
@@ -412,16 +466,24 @@
     const damage = document.querySelector("#damage");
     const formula = document.querySelector("#formula");
     const maxHpInput = document.querySelector("#maxHp");
-    const dpInput = document.querySelector("#dp");
+    const dpChoices = document.querySelector("#dpChoices");
+    const dpButtons = [...document.querySelectorAll("[data-dp]")];
     const currentHpInput = document.querySelector("#currentHp");
     const hpText = document.querySelector("#hpText");
     const hpFill = document.querySelector("#hpFill");
     const dpText = document.querySelector("#dpText");
     const dpFill = document.querySelector("#dpFill");
+    const setupCostText = document.querySelector("#setupCostText");
+    const setupCostFill = document.querySelector("#setupCostFill");
+    const setupCostInput = document.querySelector("#setupCostInput");
+    const setupCostSetButton = document.querySelector("#setupCostSetButton");
+    const setupCostResetButton = document.querySelector("#setupCostResetButton");
 
-    let maxHp = 20;
-    let hp = 20;
+    let maxHp = 10;
+    let hp = 10;
     let dp = 2;
+    let cost = 0;
+    let costOver = false;
     let lastRoll = 1;
     let isRolling = false;
 
@@ -433,12 +495,55 @@
 
     function updateMeters(syncHpInput = false) {
       const hpPercent = maxHp > 0 ? clamp((hp / maxHp) * 100, 0, 100) : 0;
-      const dpPercent = clamp((dp / 6) * 100, 0, 100);
+      const dpPercent = clamp((dp / 4) * 100, 0, 100);
       hpText.textContent = `${hp} / ${maxHp}`;
       if (syncHpInput) currentHpInput.value = hp;
       hpFill.style.setProperty("--percent", `${hpPercent}%`);
       dpText.textContent = dp;
       dpFill.style.setProperty("--percent", `${dpPercent}%`);
+      updateCost();
+    }
+
+    function updateCost() {
+      const costPercent = clamp((cost / 15) * 100, 0, 100);
+      const costLabel = `${cost} / 15`;
+      setupCostText.textContent = costOver ? `コストオーバー ${costLabel}` : costLabel;
+      setupCostText.classList.toggle("warning", costOver);
+      setupCostFill.style.setProperty("--percent", `${costPercent}%`);
+      setupCostInput.placeholder = cost >= 15 ? "MAX" : `残り ${15 - cost}`;
+    }
+
+    function setCost() {
+      if (setupCostInput.value === "") return;
+      const addCost = Math.max(Math.floor(readNumber(setupCostInput, 0)), 0);
+      if (cost + addCost > 15) {
+        costOver = true;
+        setupCostInput.value = "";
+        updateCost();
+        setupCostInput.focus();
+        return;
+      }
+      costOver = false;
+      cost += addCost;
+      setupCostInput.value = "";
+      updateCost();
+      setupCostInput.focus();
+    }
+
+    function resetCost() {
+      cost = 0;
+      costOver = false;
+      setupCostInput.value = "";
+      updateCost();
+    }
+
+    function selectDp(value) {
+      dp = clamp(Math.floor(value), 1, 4);
+      dpButtons.forEach((button) => {
+        button.classList.toggle("is-selected", Number(button.dataset.dp) === dp);
+      });
+      updateMeters();
+      updateDamage();
     }
 
     function showDice(value) {
@@ -454,13 +559,15 @@
     }
 
     function startBattle() {
-      maxHp = Math.max(Math.floor(readNumber(maxHpInput, 20)), 1);
+      maxHp = clamp(Math.floor(readNumber(maxHpInput, 10)), 1, 10);
+      maxHpInput.value = maxHp;
       hp = maxHp;
-      dp = Math.max(Math.floor(readNumber(dpInput, 0)), 0);
+      dp = clamp(dp, 1, 4);
       setup.classList.add("hidden");
       battle.style.display = "flex";
       resetButton.classList.remove("hidden");
       updateMeters(true);
+      updateCost();
       updateDamage();
     }
 
@@ -486,7 +593,7 @@
         isRolling = false;
         rollButton.disabled = false;
         rollButton.textContent = "YAKE道 GO!";
-      }, 3000);
+      }, 1000);
     }
 
     function setCurrentHp() {
@@ -502,15 +609,34 @@
       setup.classList.remove("hidden");
       resetButton.classList.add("hidden");
       maxHpInput.value = maxHp;
-      dpInput.value = dp;
     }
 
     startButton.addEventListener("click", startBattle);
     rollButton.addEventListener("click", rollDice);
     currentHpInput.addEventListener("input", setCurrentHp);
     resetButton.addEventListener("click", resetApp);
+    setupCostSetButton.addEventListener("click", setCost);
+    setupCostResetButton.addEventListener("click", resetCost);
+    setupCostInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") setCost();
+    });
+    dpChoices.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-dp]");
+      if (!button) return;
+      selectDp(Number(button.dataset.dp));
+    });
 
-    [maxHpInput, dpInput].forEach((input) => {
+    [maxHpInput, currentHpInput, setupCostInput].forEach((input) => {
+      input.addEventListener("focus", () => {
+        window.setTimeout(() => input.select(), 0);
+      });
+      input.addEventListener("pointerup", (event) => {
+        event.preventDefault();
+        input.select();
+      });
+    });
+
+    [maxHpInput].forEach((input) => {
       input.addEventListener("keydown", (event) => {
         if (event.key === "Enter") startBattle();
       });
