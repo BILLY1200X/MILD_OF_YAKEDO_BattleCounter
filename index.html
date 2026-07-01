@@ -361,6 +361,12 @@
       gap: 8px;
     }
 
+    .battle-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
     .hidden {
       display: none !important;
     }
@@ -378,8 +384,8 @@
 
     <section class="setup" id="setup">
       <div>
-        <h2>初期値入力</h2>
-        <p>HPとDPを入れたら開始。サイコロは 1-6、与ダメージは「出目 - DP」です。</p>
+        <h2 id="setupTitle">初期値入力</h2>
+        <p id="setupLead">HPとDPを入れたら開始。サイコロは 1-6、与ダメージは「出目 - DP」です。</p>
       </div>
       <div class="field">
         <label for="maxHp">HP</label>
@@ -394,7 +400,7 @@
           <button class="choice" type="button" data-dp="4">4</button>
         </div>
       </div>
-      <section class="meter">
+      <section class="meter" id="setupCostSection">
         <div class="meter-head">
           <div class="meter-name">コスト</div>
           <div class="meter-value" id="setupCostText">0 / 15</div>
@@ -452,6 +458,11 @@
             <div class="fill dp" id="dpFill" style="--percent: 50%"></div>
           </div>
         </section>
+
+        <div class="battle-actions">
+          <button class="mini" id="warriorChangeButton" type="button">YAKE道 戦士チェンジ</button>
+          <button class="mini" id="topButton" type="button">トップに戻る</button>
+        </div>
       </div>
     </section>
   </main>
@@ -459,8 +470,12 @@
   <script>
     const setup = document.querySelector("#setup");
     const battle = document.querySelector("#battle");
+    const setupTitle = document.querySelector("#setupTitle");
+    const setupLead = document.querySelector("#setupLead");
     const resetButton = document.querySelector("#resetButton");
     const startButton = document.querySelector("#startButton");
+    const warriorChangeButton = document.querySelector("#warriorChangeButton");
+    const topButton = document.querySelector("#topButton");
     const rollButton = document.querySelector("#rollButton");
     const dice = document.querySelector("#dice");
     const damage = document.querySelector("#damage");
@@ -473,6 +488,7 @@
     const hpFill = document.querySelector("#hpFill");
     const dpText = document.querySelector("#dpText");
     const dpFill = document.querySelector("#dpFill");
+    const setupCostSection = document.querySelector("#setupCostSection");
     const setupCostText = document.querySelector("#setupCostText");
     const setupCostFill = document.querySelector("#setupCostFill");
     const setupCostInput = document.querySelector("#setupCostInput");
@@ -486,6 +502,8 @@
     let costOver = false;
     let lastRoll = 1;
     let isRolling = false;
+    let rollIntervalId = 0;
+    let rollTimeoutId = 0;
 
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
     const readNumber = (input, fallback) => {
@@ -558,6 +576,30 @@
       formula.textContent = `${lastRoll} - DP ${dp}`;
     }
 
+    function stopRolling() {
+      if (rollIntervalId) window.clearInterval(rollIntervalId);
+      if (rollTimeoutId) window.clearTimeout(rollTimeoutId);
+      rollIntervalId = 0;
+      rollTimeoutId = 0;
+      isRolling = false;
+      rollButton.disabled = false;
+      rollButton.textContent = "YAKE道 GO!";
+    }
+
+    function showSetup(includeCost) {
+      stopRolling();
+      battle.style.display = "none";
+      setup.classList.remove("hidden");
+      resetButton.classList.add("hidden");
+      setupCostSection.classList.toggle("hidden", !includeCost);
+      setupTitle.textContent = includeCost ? "初期値入力" : "YAKE道 戦士チェンジ";
+      setupLead.textContent = includeCost
+        ? "HPとDPを入れたら開始。サイコロは 1-6、与ダメージは「出目 - DP」です。"
+        : "HPとDPだけ設定して、次の戦士でYAKE道 GO!";
+      maxHpInput.value = maxHp;
+      updateCost();
+    }
+
     function startBattle() {
       maxHp = clamp(Math.floor(readNumber(maxHpInput, 10)), 1, 10);
       maxHpInput.value = maxHp;
@@ -581,13 +623,15 @@
       dice.classList.add("rolling");
 
       let face = 1;
-      const rollingTimer = window.setInterval(() => {
+      rollIntervalId = window.setInterval(() => {
         showDice(face);
         face = face >= 6 ? 1 : face + 1;
       }, 55);
 
-      window.setTimeout(() => {
-        window.clearInterval(rollingTimer);
+      rollTimeoutId = window.setTimeout(() => {
+        window.clearInterval(rollIntervalId);
+        rollIntervalId = 0;
+        rollTimeoutId = 0;
         lastRoll = Math.floor(Math.random() * 6) + 1;
         updateDamage();
         isRolling = false;
@@ -605,14 +649,13 @@
     }
 
     function resetApp() {
-      battle.style.display = "none";
-      setup.classList.remove("hidden");
-      resetButton.classList.add("hidden");
-      maxHpInput.value = maxHp;
+      showSetup(true);
     }
 
     startButton.addEventListener("click", startBattle);
     rollButton.addEventListener("click", rollDice);
+    warriorChangeButton.addEventListener("click", () => showSetup(false));
+    topButton.addEventListener("click", () => showSetup(true));
     currentHpInput.addEventListener("input", setCurrentHp);
     resetButton.addEventListener("click", resetApp);
     setupCostSetButton.addEventListener("click", setCost);
