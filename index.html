@@ -174,51 +174,39 @@
     }
 
     .dice {
-      width: min(20vw, 78px);
+      width: min(24vw, 92px);
       aspect-ratio: 1;
-      border-radius: 12px;
-      background: linear-gradient(145deg, #f4f1ea, #d9d9d4);
-      box-shadow: inset -5px -6px 10px rgba(57, 64, 74, .18), inset 4px 4px 8px rgba(255, 255, 255, .74), 0 10px 24px rgba(0, 0, 0, .24);
+      border-radius: 13px;
+      background: linear-gradient(145deg, #f70013, #aa0009);
+      box-shadow: inset 0 -10px 18px rgba(80, 0, 0, .32), inset 0 8px 16px rgba(255, 84, 84, .26), 0 12px 24px rgba(0, 0, 0, .28);
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-      padding: 9px;
+      place-items: center;
+      overflow: hidden;
       transform: rotate(-2deg);
     }
 
-    .pip {
-      width: 40%;
-      aspect-ratio: 1;
-      align-self: center;
-      justify-self: center;
-      border-radius: 50%;
-      background: #181c21;
-      opacity: 0;
-      box-shadow: inset 2px 3px 4px rgba(255, 255, 255, .12);
+    .dice img {
+      width: 100%;
+      height: 100%;
+      display: none;
+      object-fit: contain;
     }
 
-    .dice[data-value="1"] .pip:nth-child(5),
-    .dice[data-value="2"] .pip:nth-child(1),
-    .dice[data-value="2"] .pip:nth-child(9),
-    .dice[data-value="3"] .pip:nth-child(1),
-    .dice[data-value="3"] .pip:nth-child(5),
-    .dice[data-value="3"] .pip:nth-child(9),
-    .dice[data-value="4"] .pip:nth-child(1),
-    .dice[data-value="4"] .pip:nth-child(3),
-    .dice[data-value="4"] .pip:nth-child(7),
-    .dice[data-value="4"] .pip:nth-child(9),
-    .dice[data-value="5"] .pip:nth-child(1),
-    .dice[data-value="5"] .pip:nth-child(3),
-    .dice[data-value="5"] .pip:nth-child(5),
-    .dice[data-value="5"] .pip:nth-child(7),
-    .dice[data-value="5"] .pip:nth-child(9),
-    .dice[data-value="6"] .pip:nth-child(1),
-    .dice[data-value="6"] .pip:nth-child(3),
-    .dice[data-value="6"] .pip:nth-child(4),
-    .dice[data-value="6"] .pip:nth-child(6),
-    .dice[data-value="6"] .pip:nth-child(7),
-    .dice[data-value="6"] .pip:nth-child(9) {
-      opacity: 1;
+    .dice.has-image img {
+      display: block;
+    }
+
+    .dice-number {
+      color: #fff;
+      font-size: 3.1rem;
+      font-weight: 950;
+      line-height: 1;
+      text-shadow: -4px 5px 0 rgba(116, 0, 0, .7), 0 2px 7px rgba(0, 0, 0, .26);
+      transform: rotate(2deg);
+    }
+
+    .dice.has-image .dice-number {
+      display: none;
     }
 
     .dice.rolling {
@@ -351,7 +339,7 @@
 
     .direct {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr 92px;
       gap: 8px;
     }
 
@@ -377,7 +365,7 @@
     <header class="title">
       <div>
         <h1>MILD OF<br>YAKEDO</h1>
-        <div class="subtitle">低温のYAKEDO / Battle Counter</div>
+        <div class="subtitle">低温のYAKE道 / Battle Counter</div>
       </div>
       <button class="reset hidden" id="resetButton" type="button" aria-label="リセット">↻</button>
     </header>
@@ -420,11 +408,10 @@
     <section class="battle" id="battle" aria-live="polite">
       <div class="dice-zone">
         <div class="dice" id="dice" data-value="1" aria-label="サイコロの目 1">
-          <span class="pip"></span><span class="pip"></span><span class="pip"></span>
-          <span class="pip"></span><span class="pip"></span><span class="pip"></span>
-          <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          <img id="diceImage" src="assets/dice-01.png" alt="">
+          <span class="dice-number" id="diceNumber">1</span>
         </div>
-        <button class="roll" id="rollButton" type="button">YAKE道 GO!</button>
+        <button class="roll" id="rollButton" type="button">ヤケ道～！ 低温ファイアー！</button>
       </div>
 
       <div class="result">
@@ -445,7 +432,8 @@
             <div class="fill hp" id="hpFill" style="--percent: 100%"></div>
           </div>
           <div class="direct">
-            <input id="currentHp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="現在HP" aria-label="現在HP">
+            <input id="takenDamage" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="被ダメージ入力" aria-label="被ダメージ入力">
+            <button class="mini" id="hurtButton" type="button">ぬるい！！</button>
           </div>
         </section>
 
@@ -478,12 +466,15 @@
     const topButton = document.querySelector("#topButton");
     const rollButton = document.querySelector("#rollButton");
     const dice = document.querySelector("#dice");
+    const diceImage = document.querySelector("#diceImage");
+    const diceNumber = document.querySelector("#diceNumber");
     const damage = document.querySelector("#damage");
     const formula = document.querySelector("#formula");
     const maxHpInput = document.querySelector("#maxHp");
     const dpChoices = document.querySelector("#dpChoices");
     const dpButtons = [...document.querySelectorAll("[data-dp]")];
-    const currentHpInput = document.querySelector("#currentHp");
+    const takenDamageInput = document.querySelector("#takenDamage");
+    const hurtButton = document.querySelector("#hurtButton");
     const hpText = document.querySelector("#hpText");
     const hpFill = document.querySelector("#hpFill");
     const dpText = document.querySelector("#dpText");
@@ -504,6 +495,14 @@
     let isRolling = false;
     let rollIntervalId = 0;
     let rollTimeoutId = 0;
+    const diceImages = {
+      1: "assets/dice-01.png",
+      2: "assets/dice-02.png",
+      3: "assets/dice-03.png",
+      4: "assets/dice-04.png",
+      5: "assets/dice-05.png",
+      6: "assets/dice-06.png",
+    };
 
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
     const readNumber = (input, fallback) => {
@@ -511,11 +510,10 @@
       return Number.isFinite(value) ? value : fallback;
     };
 
-    function updateMeters(syncHpInput = false) {
+    function updateMeters() {
       const hpPercent = maxHp > 0 ? clamp((hp / maxHp) * 100, 0, 100) : 0;
       const dpPercent = clamp((dp / 4) * 100, 0, 100);
       hpText.textContent = `${hp} / ${maxHp}`;
-      if (syncHpInput) currentHpInput.value = hp;
       hpFill.style.setProperty("--percent", `${hpPercent}%`);
       dpText.textContent = dp;
       dpFill.style.setProperty("--percent", `${dpPercent}%`);
@@ -567,6 +565,9 @@
     function showDice(value) {
       dice.dataset.value = String(value);
       dice.setAttribute("aria-label", `サイコロの目 ${value}`);
+      diceNumber.textContent = value;
+      dice.classList.remove("has-image");
+      diceImage.src = diceImages[value];
     }
 
     function updateDamage() {
@@ -583,7 +584,7 @@
       rollTimeoutId = 0;
       isRolling = false;
       rollButton.disabled = false;
-      rollButton.textContent = "YAKE道 GO!";
+      rollButton.textContent = "ヤケ道～！ 低温ファイアー！";
     }
 
     function showSetup(includeCost) {
@@ -595,7 +596,7 @@
       setupTitle.textContent = includeCost ? "初期値入力" : "YAKE道 戦士チェンジ";
       setupLead.textContent = includeCost
         ? "HPとDPを入れたら開始。サイコロは 1-6、与ダメージは「出目 - DP」です。"
-        : "HPとDPだけ設定して、次の戦士でYAKE道 GO!";
+        : "HPとDPだけ設定して、次の戦士で低温ファイアー！";
       maxHpInput.value = maxHp;
       updateCost();
     }
@@ -608,7 +609,8 @@
       setup.classList.add("hidden");
       battle.style.display = "flex";
       resetButton.classList.remove("hidden");
-      updateMeters(true);
+      takenDamageInput.value = "";
+      updateMeters();
       updateCost();
       updateDamage();
     }
@@ -617,7 +619,7 @@
       if (isRolling) return;
       isRolling = true;
       rollButton.disabled = true;
-      rollButton.textContent = "YAKE道...";
+      rollButton.textContent = "低温ファイアー...";
       dice.classList.remove("rolling");
       void dice.offsetWidth;
       dice.classList.add("rolling");
@@ -636,16 +638,17 @@
         updateDamage();
         isRolling = false;
         rollButton.disabled = false;
-        rollButton.textContent = "YAKE道 GO!";
+        rollButton.textContent = "ヤケ道～！ 低温ファイアー！";
       }, 1000);
     }
 
-    function setCurrentHp() {
-      if (currentHpInput.value === "") return;
-      const nextHp = clamp(Math.floor(readNumber(currentHpInput, hp)), 0, maxHp);
-      hp = nextHp;
-      if (Number(currentHpInput.value) !== nextHp) currentHpInput.value = nextHp;
+    function applyTakenDamage() {
+      if (takenDamageInput.value === "") return;
+      const takenDamage = Math.max(Math.floor(readNumber(takenDamageInput, 0)), 0);
+      hp = clamp(hp - takenDamage, 0, maxHp);
+      takenDamageInput.value = "";
       updateMeters();
+      takenDamageInput.focus();
     }
 
     function resetApp() {
@@ -654,9 +657,18 @@
 
     startButton.addEventListener("click", startBattle);
     rollButton.addEventListener("click", rollDice);
+    diceImage.addEventListener("load", () => {
+      dice.classList.add("has-image");
+    });
+    diceImage.addEventListener("error", () => {
+      dice.classList.remove("has-image");
+    });
     warriorChangeButton.addEventListener("click", () => showSetup(false));
     topButton.addEventListener("click", () => showSetup(true));
-    currentHpInput.addEventListener("input", setCurrentHp);
+    hurtButton.addEventListener("click", applyTakenDamage);
+    takenDamageInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") applyTakenDamage();
+    });
     resetButton.addEventListener("click", resetApp);
     setupCostSetButton.addEventListener("click", setCost);
     setupCostResetButton.addEventListener("click", resetCost);
@@ -669,7 +681,7 @@
       selectDp(Number(button.dataset.dp));
     });
 
-    [maxHpInput, currentHpInput, setupCostInput].forEach((input) => {
+    [maxHpInput, takenDamageInput, setupCostInput].forEach((input) => {
       input.addEventListener("focus", () => {
         window.setTimeout(() => input.select(), 0);
       });
